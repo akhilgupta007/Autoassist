@@ -267,7 +267,6 @@ exports.weeklyProPayouts = onSchedule(
     try {
       const snap = await db.collection("sessions")
         .where("paymentstatus", "==", true)
-        .where("payoutStatus", "==", false)
         .where("paymentDate", ">=", admin.firestore.Timestamp.fromDate(lastMonday))
         .where("paymentDate", "<=", admin.firestore.Timestamp.fromDate(lastSunday))
         .get();
@@ -281,9 +280,14 @@ exports.weeklyProPayouts = onSchedule(
       const byPro = new Map();
       snap.forEach(doc => {
         const r = doc.data();
+
+        if (r.payoutStatus === true) {
+          return;
+        }
+
         const proId = r.professionalID; // Use the professionalID field from the document
         const plan = r.plan;
-        const professionalPayoutAmount = getProfessionalPayoutAmount(plan);
+        const professionalPayoutAmount =  r.professional_amount
 
         if (!byPro.has(proId)) {
           byPro.set(proId, { proId: proId, total: 0, docs: [] });
@@ -373,3 +377,273 @@ exports.weeklyProPayouts = onSchedule(
       return null;
     }
   });
+
+exports.monthlyBonusPayouts = onSchedule(
+  {
+    schedule: "0 10 1 * *", // 1st of every month at 10 AM
+    timeZone: "UTC",
+    region: "us-central1",
+    timeoutSeconds: 540, // Increased timeout for safety
+  },
+  async (event) => {
+    const now = new Date();
+
+    // 1. Date Logic (Previous Month)
+    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfPreviousMonth = new Date(startOfCurrentMonth);
+    startOfPreviousMonth.setMonth(startOfPreviousMonth.getMonth() - 1);
+
+    const endOfPreviousMonth = new Date(startOfCurrentMonth);
+    endOfPreviousMonth.setMilliseconds(-1);
+
+    const monthName = startOfPreviousMonth.toLocaleString('default', { month: 'long' });
+    const year = startOfPreviousMonth.getFullYear();
+    const monthIndex = startOfPreviousMonth.getMonth(); // 0-11
+
+    logger.info(`Starting Bonus Run for: ${monthName} ${year}`);
+
+    try {
+      // 2. Get Sessions
+      const snapshot = await db.collection("sessions")
+        .where("paymentstatus", "==", true)
+        .where("paymentDate", ">=", admin.firestore.Timestamp.fromDate(startOfPreviousMonth))
+        .where("paymentDate", "<=", admin.firestore.Timestamp.fromDate(endOfPreviousMonth))
+        .get();
+
+      if (snapshot.empty) return;
+
+      const sessionCounts = {};
+      snapshot.forEach(doc => {
+        const pid = doc.data().professionalID;
+        if (pid) sessionCounts[pid] = (sessionCounts[pid] || 0) + 1;
+      });
+
+      // 3. Process Bonuses with Safety Checks
+      const batch = db.batch();
+
+      // We process sequentially (for loop) instead of parallel (Promise.all) 
+      // to avoid hitting Stripe rate limits if you have many users.
+      for (const [proId, count] of Object.entries(sessionCounts)) {
+
+        // --- Calculate Amount ---
+        let bonusAmount = 0;
+        if (count >= 90) bonusAmount = 30000;      // $300.00
+        else if (count >= 60) bonusAmount = 15000; // $150.00
+
+        if (bonusAmount === 0) continue;
+
+        // --- THE SAFETY CHECK (Idempotency) ---
+        // We create a custom ID. This ID is unique to this User + This Month.
+        const bonusDocId = `bonus_${proId}_${monthIndex}_${year}`;
+        const bonusRef = db.collection("payoutRuns").doc(bonusDocId);
+
+        const existingDoc = await bonusRef.get();
+
+        // If we already paid this successfully, SKIP IT.
+        if (existingDoc.exists && existingDoc.data().status === "success") {
+          logger.info(`Skipping ${proId}, already paid for ${monthName}.`);
+          continue;
+        }
+
+        // --- Get Stripe Account ---
+        const proDoc = await db.collection("professionalID").doc(proId).get();
+        const stripeAccountId = proDoc.exists ? proDoc.data().account_id : null;
+
+        if (!stripeAccountId) {
+          // Log failure to DB so you can fix it later
+          await bonusRef.set({
+            proId,
+            status: "failed",
+            error: "No Stripe Account Linked",
+            amount: bonusAmount / 100,
+            month: monthIndex,
+            year: year,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          logger.error(`No Stripe ID for ${proId}`);
+          continue;
+        }
+
+        // --- Attempt Transfer ---
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: bonusAmount,
+            currency: "usd",
+            destination: stripeAccountId,
+            description: `${monthName} Volume Bonus (${count} sessions)`,
+            metadata: { type: "monthly_bonus", month: monthName, year: year }
+          });
+
+          // SUCCESS: Write "success" to DB
+          // Use .set() to create or overwrite if it failed previously
+          await bonusRef.set({
+            proId,
+            stripeAccountId,
+            amount: bonusAmount / 100,
+            status: "success", // <--- IMPORTANT
+            transferId: transfer.id,
+            sessionsCount: count,
+            month: monthIndex,
+            year: year,
+            type: "monthly_bonus",
+            paidAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          logger.info(`Paid ${proId} $${bonusAmount / 100}`);
+
+        } catch (stripeError) {
+          // FAILURE: Write "failed" to DB
+          logger.error(`Stripe Fail for ${proId}: ${stripeError.message}`);
+
+          await bonusRef.set({
+            proId,
+            stripeAccountId,
+            amount: bonusAmount / 100,
+            status: "failed", // <--- IMPORTANT
+            error: stripeError.message, // e.g., "Insufficient Funds"
+            code: stripeError.code,
+            month: monthIndex,
+            year: year,
+            type: "monthly_bonus",
+            lastAttempt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      }
+
+    } catch (error) {
+      logger.error("Critical System Error", error);
+    }
+  }
+);
+
+exports.manualTestBonus = onRequest(
+  { region: "us-central1" },
+  async (req, res) => {
+    // --- 1. CONFIGURATION FROM URL ---
+    // Example: ?t1=2&t2=5&date=2023-11-01&dryRun=true
+
+    // Lower thresholds for testing (Default: 2 sessions = $150, 5 sessions = $300)
+    const tier1_count = parseInt(req.query.t1) || 2;
+    const tier2_count = parseInt(req.query.t2) || 5;
+
+    // Allow simulating "Today" to test different months
+    const simulatedNow = req.query.date ? new Date(req.query.date) : new Date();
+
+    // SAFETY: Default to TRUE. Pass ?dryRun=false to actually send money.
+    const isDryRun = req.query.dryRun !== "false";
+
+    // --- 2. EXACT DATE LOGIC (SAME AS PROD) ---
+    const startOfCurrentMonth = new Date(simulatedNow.getFullYear(), simulatedNow.getMonth(), 1);
+    const startOfPreviousMonth = new Date(startOfCurrentMonth);
+    startOfPreviousMonth.setMonth(startOfPreviousMonth.getMonth() - 1);
+
+    const endOfPreviousMonth = new Date(startOfCurrentMonth);
+    endOfPreviousMonth.setMilliseconds(-1);
+
+    const monthName = startOfPreviousMonth.toLocaleString('default', { month: 'long' });
+    const year = startOfPreviousMonth.getFullYear();
+
+    logger.info(`[TEST MODE] Analyzing: ${monthName} ${year}. Thresholds: ${tier1_count}/${tier2_count}`);
+
+    try {
+      // --- 3. FETCH SESSIONS ---
+      const snapshot = await db.collection("sessions")
+        .where("paymentstatus", "==", true)
+        .where("paymentDate", ">=", admin.firestore.Timestamp.fromDate(startOfPreviousMonth))
+        .where("paymentDate", "<=", admin.firestore.Timestamp.fromDate(endOfPreviousMonth))
+        .get();
+
+      if (snapshot.empty) {
+        return res.json({ message: "No sessions found in that date range.", range: { start: startOfPreviousMonth, end: endOfPreviousMonth } });
+      }
+
+      // Count sessions
+      const sessionCounts = {};
+      snapshot.forEach(doc => {
+        const pid = doc.data().professionalID;
+        if (pid) sessionCounts[pid] = (sessionCounts[pid] || 0) + 1;
+      });
+
+      const results = [];
+      const batch = db.batch();
+
+      // --- 4. CALCULATE (modified thresholds) ---
+      for (const [proId, count] of Object.entries(sessionCounts)) {
+
+        let bonusAmount = 0;
+        let tierAchieved = "None";
+
+        // Use the TEST thresholds (t1/t2)
+        if (count >= tier2_count) {
+          bonusAmount = 30000; // $300
+          tierAchieved = `Tier 2 (${tier2_count}+)`;
+        } else if (count >= tier1_count) {
+          bonusAmount = 15000; // $150
+          tierAchieved = `Tier 1 (${tier1_count}+)`;
+        }
+
+        if (bonusAmount === 0) continue;
+
+        // --- 5. ISOLATED LOGGING ---
+        // We use a DIFFERENT collection so we don't pollute the real records
+        const testDocId = `TEST_bonus_${proId}_${monthName}_${year}`;
+        const testRef = db.collection("test_payoutRuns").doc(testDocId);
+
+        const logData = {
+          proId,
+          count,
+          tierAchieved,
+          amount: bonusAmount / 100,
+          status: isDryRun ? "SIMULATED" : "PAID_VIA_TEST",
+          month: monthName,
+          testedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        // --- 6. ACTION (Dry Run vs Real) ---
+        if (isDryRun) {
+          // Just Log, Don't Pay
+          results.push({ ...logData, note: "Dry Run - No Money Sent" });
+          batch.set(testRef, logData);
+        } else {
+          // !!! DANGER: SENDING REAL MONEY !!!
+          const proDoc = await db.collection("professionalID").doc(proId).get();
+          const acct = proDoc.data()?.account_id;
+
+          if (acct) {
+            try {
+              const transfer = await stripe.transfers.create({
+                amount: bonusAmount,
+                currency: "usd",
+                destination: acct,
+                description: `TEST PAYMENT: Volume Bonus (${count} sessions)`,
+              });
+
+              logData.transferId = transfer.id;
+              results.push({ ...logData, success: true });
+              batch.set(testRef, logData);
+            } catch (e) {
+              results.push({ ...logData, error: e.message });
+              batch.set(testRef, { ...logData, status: "FAILED", error: e.message });
+            }
+          } else {
+            results.push({ ...logData, error: "No Stripe Account" });
+          }
+        }
+      }
+
+      await batch.commit();
+
+      res.json({
+        success: true,
+        mode: isDryRun ? "DRY RUN (Safe)" : "LIVE (Money Sent)",
+        analyzed_month: `${monthName} ${year}`,
+        thresholds_used: { tier1: tier1_count, tier2: tier2_count },
+        payouts_generated: results
+      });
+
+    } catch (error) {
+      logger.error("Test function error", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
