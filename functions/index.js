@@ -87,8 +87,8 @@ exports.createCheckoutSession = onRequest(
           },
         ],
         mode: 'payment',
-        success_url: `autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall`,
-        cancel_url: 'autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall',
+        success_url: `https://autoassistlive-prod.web.app/?type=checkout&status=success`,
+        cancel_url: `https://autoassistlive-prod.web.app/?type=checkout&status=cancel`,
         metadata: {
           userId: userId,
           sessionId: sessionId
@@ -189,8 +189,8 @@ exports.createExpressAccount = onRequest({ region: "us-central1", cors: true },
       if (!uid) return res.status(400).json({ error: "Missing uid" });
 
 
-      const return_url = `https://autoassist-six.vercel.app/?uid=${uid}&type=return`;
-      const refresh_url = `https://autoassist-six.vercel.app/?uid=${uid}&type=refresh`;
+      const return_url = `https://autoassistlive-prod.web.app/?uid=${uid}&type=return`;
+      const refresh_url = `https://autoassistlive-prod.web.app/?uid=${uid}&type=refresh`;
 
 
       // 1) Create (or reuse) a Connect account
@@ -287,7 +287,7 @@ exports.weeklyProPayouts = onSchedule(
 
         const proId = r.professionalID; // Use the professionalID field from the document
         const plan = r.plan;
-        const professionalPayoutAmount =  r.professional_amount
+        const professionalPayoutAmount = r.professional_amount
 
         if (!byPro.has(proId)) {
           byPro.set(proId, { proId: proId, total: 0, docs: [] });
