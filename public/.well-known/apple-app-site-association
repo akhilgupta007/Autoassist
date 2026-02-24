@@ -3,7 +3,12 @@
     "details": [
       {
         "appID": "Z8F25RS286.com.mycompany.autoassistliveflutter",
-        "paths": ["/*"]
+        "paths": ["/*"],
+         "components": [
+          {
+            "/": "/*"
+          }
+        ]
       }
     ]
   }
