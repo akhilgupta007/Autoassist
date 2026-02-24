@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.mycompany.autoassistliveflutter",
+    "sha256_cert_fingerprints":
+    ["E1:89:D8:15:5C:BA:E4:34:9E:B1:78:5B:EB:DD:BA:BD:DE:15:51:C8",
+     "B5:CF:D9:10:20:2D:2B:EF:03:44:C9:B0:81:5F:D3:E7:15:EB:42:4E:D8:9E:18:BE:7C:82:55:62:50:A8:2D:DD"]
+  }
+}]
