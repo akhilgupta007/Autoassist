@@ -87,8 +87,10 @@ exports.createCheckoutSession = onRequest(
           },
         ],
         mode: 'payment',
-        success_url: `https://autoassistlive-prod.web.app/?type=checkout&status=success`,
-        cancel_url: `https://autoassistlive-prod.web.app/?type=checkout&status=cancel`,
+        // success_url: `https://autoassistlive-prod.web.app/?type=checkout&status=success`,
+        // cancel_url: `https://autoassistlive-prod.web.app/?type=checkout&status=cancel`,
+        success_url: 'https://autoassistlive-prod.web.app/U7userFOUNDpaywall',
+        cancel_url: 'https://autoassistlive-prod.web.app/U7userFOUNDpaywall',
         metadata: {
           userId: userId,
           sessionId: sessionId
@@ -189,8 +191,11 @@ exports.createExpressAccount = onRequest({ region: "us-central1", cors: true },
       if (!uid) return res.status(400).json({ error: "Missing uid" });
 
 
-      const return_url = `https://autoassistlive-prod.web.app/?uid=${uid}&type=return`;
-      const refresh_url = `https://autoassistlive-prod.web.app/?uid=${uid}&type=refresh`;
+      // const return_url = `https://autoassistlive-prod.web.app/?uid=${uid}&type=return`;
+      // const refresh_url = `https://autoassistlive-prod.web.app/?uid=${uid}&type=refresh`;
+
+      const return_url = 'https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER';
+      const refresh_url = 'https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER';
 
 
       // 1) Create (or reuse) a Connect account
