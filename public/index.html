@@ -90,7 +90,7 @@
     <h2 id="title">Action Required</h2>
     <p id="message">Please click the button below to continue in the app</p>
     <div id="action-container">
-      <a href="autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER" id="deeplink" class="btn">Open Auto
+      <a href="https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER" id="deeplink" class="btn">Open Auto
         Assist
         App</a>
     </div>
@@ -105,26 +105,26 @@
 
       let title = 'Action Required';
       let message = 'Please click the button below to continue in the app';
-      let deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER`;
+      let deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER`;
       let buttonText = 'Open Auto Assist App';
 
       if (type === 'refresh') {
         title = 'Session Expired';
         message = 'Please tap the button to try again';
-        deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER?type=refresh`;
+        deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER?type=refresh`;
       } else if (type === 'return') {
         title = 'Setup Complete!';
         message = 'You can now return to the app';
-        deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER?type=return`;
+        deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER?type=return`;
       } else if (type === 'checkout') {
         if (status === 'success') {
           title = 'Payment Successful!';
           message = 'Thank you! You can now return to the app';
-          deepLink = `autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall?status=success`;
+          deepLink = `https://autoassistlive-prod.web.app/U7userFOUNDpaywall?status=success`;
         } else {
           title = 'Payment Cancelled';
           message = 'The payment process was not completed';
-          deepLink = `autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall?status=cancel`;
+          deepLink = `https://autoassistlive-prod.web.app/U7userFOUNDpaywall?status=cancel`;
         }
       }
 
