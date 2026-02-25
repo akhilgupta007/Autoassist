@@ -44,56 +44,54 @@
       padding: 40px;
       border-radius: 20px;
       max-width: 400px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     }
 
     h2 {
       margin-top: 0;
+      font-size: 24px;
     }
 
-    .spinner {
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid white;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
+    p {
+      opacity: 0.9;
+      margin-bottom: 30px;
     }
 
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
+    .btn {
+      display: inline-block;
+      background: white;
+      color: #764ba2;
+      padding: 15px 30px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     }
 
-    a {
-      color: white;
-      text-decoration: underline;
-      font-weight: 600;
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
     }
 
-    #fallback {
-      display: none;
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    #action-container {
       margin-top: 20px;
-      padding: 15px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 10px;
     }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <div class="spinner"></div>
-    <h2 id="title">Redirecting to Auto Assist...</h2>
-    <p id="message">Please wait a moment</p>
-    <div id="fallback">
-      <p>App didn't open automatically?</p>
-      <a href="https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER" id="deeplink">Open Auto Assist
+    <h2 id="title">Action Required</h2>
+    <p id="message">Please click the button below to continue in the app</p>
+    <div id="action-container">
+      <a href="autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER" id="deeplink" class="btn">Open Auto
+        Assist
         App</a>
     </div>
   </div>
@@ -105,78 +103,35 @@
       const type = urlParams.get('type');
       const status = urlParams.get('status');
 
-      let title = 'Redirecting to Auto Assist...';
-      let message = 'Please wait a moment';
-      let deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER`;
+      let title = 'Action Required';
+      let message = 'Please click the button below to continue in the app';
+      let deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER`;
+      let buttonText = 'Open Auto Assist App';
 
       if (type === 'refresh') {
         title = 'Session Expired';
-        message = 'Please try again';
-        deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER?type=refresh`;
+        message = 'Please tap the button to try again';
+        deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER?type=refresh`;
       } else if (type === 'return') {
         title = 'Setup Complete!';
-        message = 'Taking you back to the app...';
-        deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER?type=return`;
+        message = 'You can now return to the app';
+        deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER?type=return`;
       } else if (type === 'checkout') {
         if (status === 'success') {
           title = 'Payment Successful!';
-          message = 'Taking you back to the app...';
-          deepLink = `https://autoassistlive-prod.web.app/U7userFOUNDpaywall?status=success`;
+          message = 'Thank you! You can now return to the app';
+          deepLink = `autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall?status=success`;
         } else {
           title = 'Payment Cancelled';
-          message = 'Taking you back to the app...';
-          deepLink = `https://autoassistlive-prod.web.app/U7userFOUNDpaywall?status=cancel`;
+          message = 'The payment process was not completed';
+          deepLink = `autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall?status=cancel`;
         }
       }
 
       document.getElementById('title').textContent = title;
       document.getElementById('message').textContent = message;
       document.getElementById('deeplink').href = deepLink;
-
-      // Try to open app immediately
-      setTimeout(() => {
-        window.location.href = deepLink;
-      }, 500);
-
-      // Show fallback link after 2 seconds if app doesn't open
-      setTimeout(() => {
-        document.getElementById('fallback').style.display = 'block';
-      }, 2000);
-
-      //  const loadEl = document.querySelector('#load');
-      // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-      // // The Firebase SDK is initialized and available here!
-      //
-      // firebase.auth().onAuthStateChanged(user => { });
-      // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-      // firebase.firestore().doc('/foo/bar').get().then(() => { });
-      // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-      // firebase.messaging().requestPermission().then(() => { });
-      // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-      // firebase.analytics(); // call to activate
-      // firebase.analytics().logEvent('tutorial_completed');
-      // firebase.performance(); // call to activate
-      //
-      // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-      /*        try {
-                let app = firebase.app();
-                let features = [
-                  'auth', 
-                  'database', 
-                  'firestore',
-                  'functions',
-                  'messaging', 
-                  'storage', 
-                  'analytics', 
-                  'remoteConfig',
-                  'performance',
-                ].filter(feature => typeof app[feature] === 'function');
-                loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-              } catch (e) {
-                console.error(e);
-                loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
-              }*/
+      document.getElementById('deeplink').textContent = buttonText;
     });
   </script>
 </body>
