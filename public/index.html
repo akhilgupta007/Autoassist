@@ -93,7 +93,7 @@
     <p id="message">Please wait a moment</p>
     <div id="fallback">
       <p>App didn't open automatically?</p>
-      <a href="autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER" id="deeplink">Open Auto Assist
+      <a href="https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER" id="deeplink">Open Auto Assist
         App</a>
     </div>
   </div>
@@ -107,25 +107,25 @@
 
       let title = 'Redirecting to Auto Assist...';
       let message = 'Please wait a moment';
-      let deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER`;
+      let deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER`;
 
       if (type === 'refresh') {
         title = 'Session Expired';
         message = 'Please try again';
-        deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER?type=refresh`;
+        deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER?type=refresh`;
       } else if (type === 'return') {
         title = 'Setup Complete!';
         message = 'Taking you back to the app...';
-        deepLink = `autoassistliveprod://autoassistliveprod.com/A7PROPaymentpageDRAWER?type=return`;
+        deepLink = `https://autoassistlive-prod.web.app/A7PROPaymentpageDRAWER?type=return`;
       } else if (type === 'checkout') {
         if (status === 'success') {
           title = 'Payment Successful!';
           message = 'Taking you back to the app...';
-          deepLink = `autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall?status=success`;
+          deepLink = `https://autoassistlive-prod.web.app/U7userFOUNDpaywall?status=success`;
         } else {
           title = 'Payment Cancelled';
           message = 'Taking you back to the app...';
-          deepLink = `autoassistliveprod://autoassistliveprod.com/U7userFOUNDpaywall?status=cancel`;
+          deepLink = `https://autoassistlive-prod.web.app/U7userFOUNDpaywall?status=cancel`;
         }
       }
 
