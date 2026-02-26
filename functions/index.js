@@ -87,10 +87,10 @@ exports.createCheckoutSession = onRequest(
           },
         ],
         mode: 'payment',
-        // success_url: `https://autoassistlive-prod.web.app/?type=checkout&status=success`,
-        // cancel_url: `https://autoassistlive-prod.web.app/?type=checkout&status=cancel`,
-        success_url: 'https://autoassistlive-prod.web.app/U7userFOUNDpaywall',
-        cancel_url: 'https://autoassistlive-prod.web.app/U7userFOUNDpaywall',
+        success_url: `https://autoassistlive-prod.web.app/?type=checkout&status=success`,
+        cancel_url: `https://autoassistlive-prod.web.app/?type=checkout&status=cancel`,
+        // success_url: 'https://autoassistlive-prod.web.app/U7userFOUNDpaywall',
+        // cancel_url: 'https://autoassistlive-prod.web.app/U7userFOUNDpaywall',
         metadata: {
           userId: userId,
           sessionId: sessionId
