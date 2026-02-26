@@ -111,6 +111,47 @@ exports.createCheckoutSession = onRequest(
   }
 );
 
+
+exports.createPaymentIntent = onRequest(async (req, res) => {
+
+  try {
+    if (req.method === "OPTIONS") {
+      logger.info("Hello")
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Access-Control-Allow-Methods", "POST");
+      res.set("Access-Control-Allow-Headers", "Content-Type");
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    const { amount, userId, sessionId } = req.body;
+    
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100),
+      currency: "usd",
+      metadata: {
+        userId: userId,
+        sessionId: sessionId,
+      },
+    });
+
+    res.set("Access-Control-Allow-Origin", "*");
+    res.json({ clientSecret: paymentIntent.client_secret });
+
+  } catch (error) {
+    console.error("Stripe error:", error);
+    res.set("Access-Control-Allow-Origin", "*");
+    res.status(500).json({
+      error: error.message,
+      code: error.code || "internal_error"
+    });
+  }
+});
+
 exports.stripeWebhook = onRequest(
   { region: "us-central1", invoker: "public" },
   async (req, res) => {
@@ -129,7 +170,7 @@ exports.stripeWebhook = onRequest(
     }
 
     // Handle the event
-    if (event.type === "checkout.session.completed") {
+    if (event.type === "checkout.session.completed" || event.type === "payment_intent.succeeded") {
       const session = event.data.object;
       logger.info("Checkout session completed:", session.id);
 
