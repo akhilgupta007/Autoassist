@@ -111,7 +111,6 @@ exports.createCheckoutSession = onRequest(
   }
 );
 
-
 exports.createPaymentIntent = onRequest(async (req, res) => {
 
   try {
